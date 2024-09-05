@@ -6,9 +6,9 @@
 */
 module tb ();
 
-  // Dump the signals to a VCD file. You can view it with gtkwave.
+  // Dump the signals to a FST file. You can view it with gtkwave.
   initial begin
-    $dumpfile("tb.vcd");
+    $dumpfile("tb.fst");
     $dumpvars(0, tb);
     #1;
   end
@@ -23,8 +23,14 @@ module tb ();
   wire [7:0] uio_out;
   wire [7:0] uio_oe;
 
+  wire hsync = uo_out[7];
+  wire vsync = uo_out[3];
+  wire [1:0] R = {uo_out[4], uo_out[0]};
+  wire [1:0] G = {uo_out[5], uo_out[1]};
+  wire [1:0] B = {uo_out[6], uo_out[2]};
+
   // Replace tt_um_example with your module name:
-  tt_um_example user_project (
+  tt_um_dendraws_donut user_project (
 
       // Include power ports for the Gate Level test:
 `ifdef GL_TEST
