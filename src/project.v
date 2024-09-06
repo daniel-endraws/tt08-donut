@@ -20,9 +20,9 @@ module tt_um_dendraws_donut (
   // VGA signals
   wire hsync;
   wire vsync;
-  wire [1:0] R;
-  wire [1:0] G;
-  wire [1:0] B;
+  reg [1:0] R;
+  reg [1:0] G;
+  reg [1:0] B;
   wire video_active;
   wire [9:0] pix_x;
   wire [9:0] pix_y;
@@ -57,7 +57,6 @@ module tt_um_dendraws_donut (
     if (phase == 1'b0)
       i_phase_0 = i[17] || |i[15:14] || i[10] || |i[8:7];
   end
-
 
   reg [9:0] square_in [7:0];
   wire [19:0] square_out [7:0];
@@ -109,15 +108,12 @@ module tt_um_dendraws_donut (
 
   genvar j, k;
   generate
-    for(j = 0; j < 8; j += 1) begin : square_gen
+    for(j = 0; j < 8; j = j + 1) begin : square_gen
       // k = (j == 4 || j == 5) ? 7 : 6;
       square #(.N(10), .K((j == 4 || j == 5) ? 7 : 6), .POST_SHIFT(8)) square_inst (.in(square_in[j]), .out(square_out[j]));
     end
   endgenerate
 
-
-  // d11 and d18 benefit from 7 quite a bit
-  // 9x and 16x and 0x were the only 7s originally
 
   // ------------------------------ Major Axis ------------------------------
   
@@ -212,25 +208,84 @@ module tt_um_dendraws_donut (
   wire [7:0] d20 = d18_x + d2_y;
   assign i[20] = d20 < 35 && d20 > 31 && pix_y < 215;
 
+  // ------------------------------ Squares ------------------------------
+  wire [15:0] i_squares;
+
+  localparam N_FC = 8;
+
+  // Frame counter
+  reg [N_FC-1:0] fc;
+  wire [N_FC-1:0] fc_2 = fc >> 1;
+  wire [N_FC-1:0] fc_l = fc + (1 << (N_FC - 1));
+  wire [N_FC-1:0] fc_l_2 = fc_l >> 2;
+  reg frame_fired;
+
+  always @(posedge clk) begin
+    if (~rst_n) begin
+      fc <= 0;
+      frame_fired <= 0;
+    end else if (pix_y == 0 && ~frame_fired) begin
+      fc <= fc + 8;
+      frame_fired <= 1'b1;
+    end else if (vsync) begin
+      frame_fired <= 0;
+    end
+  end
+
+  assign i_squares[0] = (pix_x - 230 + fc_2) < 10 && (pix_y - 300 - fc) < 10;
+  assign i_squares[1] = (pix_x - 230 + fc_l) < 10 && (pix_y - 300 - fc_l) < 10;
+  
+  assign i_squares[2] = (pix_x - 360 - fc_l_2) < 10 && (pix_y - 300 - fc_l) < 10;
+  assign i_squares[3] = (pix_x - 360 - fc) < 10 && (pix_y - 300 - fc) < 10;
+
+  assign i_squares[4] = (pix_x - 200 + fc_l) < 10 && (pix_y - 275 - fc_l_2) < 10;
+  assign i_squares[5] = (pix_x - 200 + fc) < 10 && (pix_y - 275 - fc) < 10;
+
+  assign i_squares[6] = (pix_x - 430 - fc) < 10 && (pix_y - 275 - fc_2) < 10;
+  assign i_squares[7] = (pix_x - 430 - fc_l) < 10 && (pix_y - 275 - fc_l_2) < 10;
+
+  assign i_squares[8] = (pix_x - 230 + fc) < 10 && (pix_y - 240 + fc) < 10;
+  assign i_squares[9] = (pix_x - 230 + fc_l) < 10 && (pix_y - 240 + fc_l_2) < 10;
+
+  assign i_squares[10] = (pix_x - 430 - fc) < 10 && (pix_y - 200 + fc) < 10;
+  assign i_squares[11] = (pix_x - 430 - fc_l_2) < 10 && (pix_y - 200 + fc_l) < 10;
+
+  assign i_squares[12] = (pix_x - 360 + fc_2) < 10 && (pix_y - 240 + fc) < 10;
+  assign i_squares[13] = (pix_x - 360 + fc_l) < 10 && (pix_y - 240 + fc_l) < 10;
+
+  assign i_squares[14] = (pix_x - 230 - fc_l_2) < 10 && (pix_y - 275 + fc_l) < 10;
+  assign i_squares[15] = (pix_x - 230 - fc) < 10 && (pix_y - 275 + fc) < 10;
+
   // ------------------------------ Display ------------------------------
 
   // Values for bounds will be valid in phase 1
   wire in_bounds_rect = pix_x > 150 && pix_y > 120 && pix_x < 490 && pix_y < 360;
   wire in_bounds_circ = d0 < 52;
   wire in_bounds = in_bounds_rect && in_bounds_circ;
-
   wire in_bounds_hole = (d6 < 23 && pix_y < 233) || (d4 < 14 && pix_y >= 233);
   
+  wire circ_fire = in_bounds_rect && in_bounds_circ && (i_phase_0 || i_phase_1);
+  wire square_fire = |i_squares;
 
   wire i_phase_1 = |i[20:18] || i[16] || |i[13:11] || i[9] || |i[6:0];
 
-
-  wire circ_fire = in_bounds_rect && in_bounds_circ && (i_phase_0 || i_phase_1);
-  wire [1:0] value = circ_fire ? 2'b11 : (~in_bounds || in_bounds_hole ? 2'b01 : 2'b00);
-
-  assign R = video_active ? value : 2'b00;
-  assign G = video_active ? value : 2'b00;
-  assign B = video_active ? value : 2'b00;
+  always @(*) begin
+    if (~video_active) begin
+      {R, G, B} = 6'd0;
+    end else begin
+      if (circ_fire)
+        {R, G, B} = 6'b111111;
+      else if (in_bounds && ~in_bounds_hole)
+        {R, G, B} = 6'b001010;
+      else if (in_bounds && in_bounds_hole)
+        {R, G, B} = 6'b000001;
+      else if (square_fire)
+        // {R, G, B} = 6'b001010;
+        {R, G, B} = 6'b011111;
+      else
+        {R, G, B} = 6'b000001;
+    end
+  end
   
   
 endmodule
