@@ -9,11 +9,12 @@ To use:
 - Add a 3-bit (or more) "rgb" output to the top level
 */
 
-module hvsync_generator(clk, reset, hsync, vsync, display_on, hpos, vpos);
+module hvsync_generator(clk, reset, hsync, vsync, phase, display_on, hpos, vpos);
 
   input clk;
   input reset;
-  output reg hsync, vsync;
+  output reg phase;
+  output wire hsync, vsync;
   output display_on;
   output reg [9:0] hpos;
   output reg [9:0] vpos;
@@ -37,28 +38,42 @@ module hvsync_generator(clk, reset, hsync, vsync, display_on, hpos, vpos);
   parameter V_SYNC_END      = V_DISPLAY + V_BOTTOM + V_SYNC - 1;
   parameter V_MAX           = V_DISPLAY + V_TOP + V_BOTTOM + V_SYNC - 1;
 
-  wire hmaxxed = (hpos == H_MAX) || reset;	// set when hpos is maximum
-  wire vmaxxed = (vpos == V_MAX) || reset;	// set when vpos is maximum
+  wire hmaxxed = (hpos == H_MAX);	// set when hpos is maximum
+  wire vmaxxed = (vpos == V_MAX);	// set when vpos is maximum
+
+  assign hsync = (hpos >= H_SYNC_START && hpos <= H_SYNC_END);
+  assign vsync = (vpos >= V_SYNC_START && vpos <= V_SYNC_END);
+
+  // pixel phase
+  always @(posedge clk) begin
+    if (reset)
+      phase <= 1'b0;
+    else
+      phase <= phase + 1'b1;
+  end
   
   // horizontal position counter
-  always @(posedge clk)
-  begin
-    hsync <= (hpos>=H_SYNC_START && hpos<=H_SYNC_END);
-    if(hmaxxed)
+  always @(posedge clk) begin
+    if (reset) begin
       hpos <= 0;
-    else
-      hpos <= hpos + 1;
+    end else if (phase == 1'b1) begin 
+      if(hmaxxed)
+        hpos <= 0;
+      else
+        hpos <= hpos + 1;
+    end
   end
 
   // vertical position counter
-  always @(posedge clk)
-  begin
-    vsync <= (vpos>=V_SYNC_START && vpos<=V_SYNC_END);
-    if(hmaxxed)
-      if (vmaxxed)
+  always @(posedge clk) begin
+    if (reset) begin
+      vpos <= 0;
+    end else if (hmaxxed && (phase == 1'b1)) begin
+      if (vmaxxed) 
         vpos <= 0;
-      else
+      else 
         vpos <= vpos + 1;
+    end
   end
   
   // display_on is set when beam is in "safe" visible frame

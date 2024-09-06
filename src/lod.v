@@ -12,7 +12,7 @@ module lod #(parameter N=16) (
   
   genvar i;
   generate 
-    for(i = 1; i < N; i += 1) begin
+    for(i = 1; i < N; i += 1) begin : lod_bits
       assign out[N-i-1] = prev_zeros[N-i] && in[N-i-1]; 
       assign prev_zeros[N-i-1] = prev_zeros[N-i] && ~in[N-i-1];
   	end

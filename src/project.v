@@ -37,151 +37,196 @@ module tt_um_dendraws_donut (
   // Suppress unused signals warning
   wire _unused_ok = &{ena, ui_in, uio_in};
 
+  // TODO: slow hvsync_generator
   hvsync_generator hvsync_gen(
     .clk(clk),
     .reset(~rst_n),
     .hsync(hsync),
     .vsync(vsync),
+    .phase(phase),
     .display_on(video_active),
     .hpos(pix_x),
     .vpos(pix_y)
   );
 
+  reg phase;
+  reg i_phase_0;
   wire [20:0] i;
+
+  always @(posedge clk) begin
+    if (phase == 1'b0)
+      i_phase_0 = i[17] || |i[15:14] || i[10] || |i[8:7];
+  end
+
+
+  reg [9:0] square_in [7:0];
+  wire [19:0] square_out [7:0];
+  wire [19:0] square_out_d0_x, square_out_d0_y;
+
+  wire [6:0] d0_x = square_out_d0_x[6:0];
+  wire [6:0] d0_y = square_out_d0_y[6:0];
+  wire [6:0] d1_y = square_out[1][6:0];
+  wire [6:0] d2_y = square_out[2][6:0];
+  wire [5:0] d5_y = square_out[6][5:0];
+  wire [6:0] d6_y = square_out[7][6:0];
+  wire [6:0] d7_x = square_out[6][6:0];
+  wire [6:0] d7_y = square_out[1][6:0];
+  wire [6:0] d8_x = square_out[7][6:0];
+  wire [7:0] d9_x = square_out[4][7:0];
+  wire [6:0] d10_x = square_out[3][6:0];
+  wire [6:0] d10_y = square_out[2][6:0];
+  wire [7:0] d11_x = square_out[3][7:0];
+  wire [6:0] d14_x = square_out[4][6:0];
+  wire [6:0] d15_x = square_out[5][6:0];
+  wire [7:0] d16_x = square_out[5][7:0];
+  wire [6:0] d17_x = square_out[0][6:0];
+  wire [7:0] d18_x = square_out[0][7:0];
+
+  always @(*) begin
+    if (phase == 1'b0) begin
+      square_in[0] = pix_x_mirr - 10'd397;
+      square_in[1] = pix_y - 10'd305;
+      square_in[2] = pix_y - 10'd266;
+      square_in[3] = pix_x - 10'd397;
+      square_in[4] = pix_x_mirr - 10'd305;
+      square_in[5] = pix_x_mirr - 10'd362;
+      square_in[6] = pix_x - 10'd305;
+      square_in[7] = pix_x - 10'd362;
+    end else begin
+      square_in[0] = pix_x_mirr - 10'd420;
+      square_in[1] = pix_y - 10'd229;
+      square_in[2] = pix_y - 10'd205;
+      square_in[3] = pix_x - 10'd420;
+      square_in[4] = pix_x - 10'd276;
+      square_in[5] = pix_x_mirr - 10'd276;
+      square_in[6] = pix_y - 10'd250;
+      square_in[7] = pix_y - 10'd291;
+    end
+  end
+
+  square #(.N(10), .K(7), .POST_SHIFT(8)) square_d0_x (.in(pix_x - 10'd320), .out(square_out_d0_x));
+  square #(.N(10), .K(7), .POST_SHIFT(8)) square_d0_y (.in(pix_y - 10'd240), .out(square_out_d0_y));
+
+  genvar j, k;
+  generate
+    for(j = 0; j < 8; j += 1) begin : square_gen
+      // k = (j == 4 || j == 5) ? 7 : 6;
+      square #(.N(10), .K((j == 4 || j == 5) ? 7 : 6), .POST_SHIFT(8)) square_inst (.in(square_in[j]), .out(square_out[j]));
+    end
+  endgenerate
+
+
+  // d11 and d18 benefit from 7 quite a bit
+  // 9x and 16x and 0x were the only 7s originally
 
   // ------------------------------ Major Axis ------------------------------
   
   // ------------------------------
-  wire [6:0] d1_x, d1_y;
-  square #(.N(10), .K(7), .POST_SHIFT(8)) square_d1_x (.in(pix_x - 10'd320), .out(d1_x));
-  square #(.N(10), .K(6), .POST_SHIFT(8)) square_d1_y (.in(pix_y - 10'd240), .out(d1_y));
-  wire [6:0] d1 = (d1_x >> 1) + d1_y;
-  assign i[0] = d1 < 7'd52 && d1 > 7'd45;
+  wire [6:0] d0 = (d0_x >> 1) + d0_y;
+  assign i[0] = d0 < 7'd52 && d0 > 7'd45;
 
   // ------------------------------
-  wire [6:0] d2_y;
-  square #(.N(10), .K(6), .POST_SHIFT(8)) square_d2_y (.in(pix_y - 10'd229), .out(d2_y));
-  wire [6:0] d2 = d1_x + `TRIPLE(d2_y);
-  assign i[1] = d2 < 7'd100 && d2 > 90 && pix_y > 230;
+  wire [6:0] d1 = d0_x + `TRIPLE(d1_y);
+  assign i[1] = d1 < 7'd100 && d1 > 90 && pix_y > 230;
 
   // ------------------------------
-  wire [6:0] d3_y;
-  square #(.N(10), .K(6), .POST_SHIFT(8)) square_d3_y (.in(pix_y - 10'd205), .out(d3_y));
-  wire [5:0] d3 = ((d1_x >> 1) - (d1_x >> 3)) + d3_y;
-  assign i[2] = d3 < 30 && d3 > 26 && pix_y > 150;
+  wire [5:0] d2 = ((d0_x >> 1) - (d0_x >> 3)) + d2_y;
+  assign i[2] = d2 < 30 && d2 > 26 && pix_y > 150;
 
   // ------------------------------
-  wire [7:0] d4 = d1_x + `TRIPLE(d3_y);
-  assign i[3] = d4 < 43 && d4 > 37;
+  wire [7:0] d3 = d0_x + `TRIPLE(d2_y);
+  assign i[3] = d3 < 43 && d3 > 37;
 
   // ------------------------------
-  wire [7:0] d5 = d1_x + `TRIPLE(d3_y);
-  assign i[4] = d5 < 18 && d5 > 13;
+  wire [7:0] d4 = d0_x + `TRIPLE(d2_y);
+  assign i[4] = d4 < 18 && d4 > 13;
 
   // ------------------------------
-  wire [5:0] d6_y;
-  square #(.N(10), .K(6), .POST_SHIFT(8)) square_d6_y (.in(pix_y - 10'd250), .out(d6_y));
-  wire [5:0] d6 = (d1_x >> 1) + d6_y;
-  assign i[5] = d6 < 14 && d6 > 11 && pix_y < 210;
+  wire [5:0] d5 = (d0_x >> 1) + d5_y;
+  assign i[5] = d5 < 14 && d5 > 11 && pix_y < 210;
 
   // ------------------------------
-  wire [6:0] d7_y;
-  square #(.N(10), .K(6), .POST_SHIFT(8)) square_d7_y (.in(pix_y - 10'd291), .out(d7_y));
-  wire [6:0] d7 = d1_x + d7_y;
-  assign i[6] = d7 < 25 && d7 > 22 && pix_y < 233;
+  wire [6:0] d6 = d0_x + d6_y;
+  assign i[6] = d6 < 25 && d6 > 22 && pix_y < 233;
 
 
   // ------------------------------ Minor Axis Right ------------------------------
 
   // ------------------------------
-  wire [6:0] d8_x, d8_y;
-  square #(.N(10), .K(6), .POST_SHIFT(8)) square_d8_x (.in(pix_x - 10'd305), .out(d8_x));
-  square #(.N(10), .K(5), .POST_SHIFT(8)) square_d8_y (.in(pix_y - 10'd305), .out(d8_y));
-  wire [6:0] d8 = d8_x + (d8_y >> 1);
-  assign i[7] = d8 < 15 && d8 > 11 && pix_x > 344;
+  wire [6:0] d7 = d7_x + (d7_y >> 1);
+  assign i[7] = d7 < 15 && d7 > 11 && pix_x > 344;
 
   // ------------------------------
-  wire [6:0] d9_x, d9_y;
-  square #(.N(10), .K(6), .POST_SHIFT(8)) square_d9_x (.in(pix_x - 10'd362), .out(d9_x));
-  square #(.N(10), .K(6), .POST_SHIFT(8)) square_d9_y (.in(pix_y - 10'd305), .out(d9_y));
-  wire [5:0] d9 = d9_x + ((d9_y >> 1) + (d9_y >> 3));
-  assign i[8] = d9 < 15 && d9 > 12 && pix_x > 375 && pix_y < 305;
+  wire [5:0] d8 = d8_x + ((d7_y >> 1) + (d7_y >> 3));
+  assign i[8] = d8 < 15 && d8 > 12 && pix_x > 375 && pix_y < 305;
 
   // ------------------------------
-  wire [7:0] d10_x;
-  square #(.N(10), .K(7), .POST_SHIFT(8)) square_d10_x (.in(pix_x - 10'd276), .out(d10_x));
-  wire [6:0] d10 = ((d10_x >> 1) - (d10_x >> 3)) + d7_y;
-  assign i[9] = d10 < 33 && d10 > 29 && pix_x > 320 && pix_y >= 225;
+  wire [6:0] d9 = ((d9_x >> 1) - (d9_x >> 3)) + d6_y;
+  assign i[9] = d9 < 33 && d9 > 29 && pix_x > 320 && pix_y >= 225;
 
   // ------------------------------
-  wire [6:0] d11_x, d11_y;
-  square #(.N(10), .K(6), .POST_SHIFT(8)) square_d11_x (.in(pix_x - 10'd397), .out(d11_x));
-  square #(.N(10), .K(6), .POST_SHIFT(8)) square_d11_y (.in(pix_y - 10'd266), .out(d11_y));
-  wire [5:0] d11 = d11_x + d11_y;
-  assign i[10] = d11 < 16 && d11 > 12 && pix_x > 380 && pix_y < 305;
+  wire [5:0] d10 = d10_x + d10_y;
+  assign i[10] = d10 < 16 && d10 > 12 && pix_x > 380 && pix_y < 305;
 
   // ------------------------------
-  wire [7:0] d12_x;
-  square #(.N(10), .K(6), .POST_SHIFT(8)) square_d12_x (.in(pix_x - 10'd414), .out(d12_x));
-  wire [8:0] d12 = (d12_x + (d12_x >> 2)) + d2_y;
-  assign i[11] = d12 < 16 && d12 > 12 && pix_y < 225 && pix_x < 455;
+  wire [8:0] d11 = (d11_x + (d11_x >> 2)) + d1_y;
+  assign i[11] = d11 < 16 && d11 > 12 && pix_y < 225 && pix_x < 455;
 
   // ------------------------------
-  wire [7:0] d13 = (d12_x - (d12_x >> 2)) + d3_y;
-  assign i[12] = d13 < 18 && d13 > 15 && pix_y < 218;
+  wire [7:0] d12 = (d11_x - (d11_x >> 2)) + d2_y;
+  assign i[12] = d12 < 18 && d12 > 15 && pix_y < 218;
 
   // ------------------------------
-  wire [7:0] d14 = d12_x + d3_y;
-  assign i[13] = d14 < 35 && d14 > 31 && pix_y < 215;
+  wire [7:0] d13 = d11_x + d2_y;
+  assign i[13] = d13 < 35 && d13 > 31 && pix_y < 215;
 
 
   // ------------------------------ Minor Axis Left ------------------------------
   wire [9:0] pix_x_mirr = 640 - pix_x;
 
   // ------------------------------ 
-  wire [6:0] d15_x;
-  square #(.N(10), .K(6), .POST_SHIFT(8)) square_d15_x (.in(pix_x_mirr - 10'd305), .out(d15_x));
-  wire [6:0] d15 = d15_x + (d8_y >> 1);
-  assign i[14] = d15 < 15 && d15 > 11 && pix_x_mirr > 344;
+  wire [6:0] d14 = d14_x + (d7_y >> 1);
+  assign i[14] = d14 < 15 && d14 > 11 && pix_x_mirr > 344;
 
   // ------------------------------
-  wire [6:0] d16_x;
-  square #(.N(10), .K(6), .POST_SHIFT(8)) square_d16_x (.in(pix_x_mirr - 10'd362), .out(d16_x));
-  wire [5:0] d16 = d16_x + ((d9_y >> 1) + (d9_y >> 3));
-  assign i[15] = d16 < 15 && d16 > 12 && pix_x_mirr > 375 && pix_y < 305;
+  wire [5:0] d15 = d15_x + ((d7_y >> 1) + (d7_y >> 3));
+  assign i[15] = d15 < 15 && d15 > 12 && pix_x_mirr > 375 && pix_y < 305;
 
   // ------------------------------
-  wire [7:0] d17_x;
-  square #(.N(10), .K(7), .POST_SHIFT(8)) square_d17_x (.in(pix_x_mirr - 10'd276), .out(d17_x));
-  wire [6:0] d17 = ((d17_x >> 1) - (d17_x >> 3)) + d7_y;
-  assign i[16] = d17 < 33 && d17 > 29 && pix_x_mirr > 320 && pix_y >= 225;
+  wire [6:0] d16 = ((d16_x >> 1) - (d16_x >> 3)) + d6_y;
+  assign i[16] = d16 < 33 && d16 > 29 && pix_x_mirr > 320 && pix_y >= 225;
 
   // ------------------------------
-  wire [6:0] d18_x;
-  square #(.N(10), .K(6), .POST_SHIFT(8)) square_d18_x (.in(pix_x_mirr - 10'd397), .out(d18_x));
-  wire [5:0] d18 = d18_x + d11_y;
-  assign i[17] = d18 < 16 && d18 > 12 && pix_x_mirr > 380 && pix_y < 305;
+  wire [5:0] d17 = d17_x + d10_y;
+  assign i[17] = d17 < 16 && d17 > 12 && pix_x_mirr > 380 && pix_y < 305;
 
   // ------------------------------
-  wire [7:0] d19_x;
-  square #(.N(10), .K(6), .POST_SHIFT(8)) square_d19_x (.in(pix_x_mirr - 10'd414), .out(d19_x));
-  wire [8:0] d19 = (d19_x + (d19_x >> 2)) + d2_y;
-  assign i[18] = d19 < 16 && d19 > 12 && pix_y < 225 && pix_x_mirr < 455;
+  wire [8:0] d18 = (d18_x + (d18_x >> 2)) + d1_y;
+  assign i[18] = d18 < 16 && d18 > 12 && pix_y < 225 && pix_x_mirr < 455;
 
   // ------------------------------
-  wire [7:0] d20 = (d19_x - (d19_x >> 2)) + d3_y;
-  assign i[19] = d20 < 18 && d20 > 15 && pix_y < 218;
+  wire [7:0] d19 = (d18_x - (d18_x >> 2)) + d2_y;
+  assign i[19] = d19 < 18 && d19 > 15 && pix_y < 218;
 
   // ------------------------------
-  wire [7:0] d21 = d19_x + d3_y;
-  assign i[20] = d21 < 35 && d21 > 31 && pix_y < 215;
+  wire [7:0] d20 = d18_x + d2_y;
+  assign i[20] = d20 < 35 && d20 > 31 && pix_y < 215;
 
   // ------------------------------ Display ------------------------------
 
+  // Values for bounds will be valid in phase 1
   wire in_bounds_rect = pix_x > 150 && pix_y > 120 && pix_x < 490 && pix_y < 360;
-  wire in_bounds_circ = d1 < 52;
-  wire light = in_bounds_rect && in_bounds_circ && |i;
-  wire [1:0] value = {2{light}};
+  wire in_bounds_circ = d0 < 52;
+  wire in_bounds = in_bounds_rect && in_bounds_circ;
+
+  wire in_bounds_hole = (d6 < 23 && pix_y < 233) || (d4 < 14 && pix_y >= 233);
+  
+
+  wire i_phase_1 = |i[20:18] || i[16] || |i[13:11] || i[9] || |i[6:0];
+
+
+  wire circ_fire = in_bounds_rect && in_bounds_circ && (i_phase_0 || i_phase_1);
+  wire [1:0] value = circ_fire ? 2'b11 : (~in_bounds || in_bounds_hole ? 2'b01 : 2'b00);
 
   assign R = video_active ? value : 2'b00;
   assign G = video_active ? value : 2'b00;

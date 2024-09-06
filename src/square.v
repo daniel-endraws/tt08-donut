@@ -27,7 +27,7 @@ module square #(
     (* nolatches *)
     always @(*) begin
         lod_val = '0;
-        for (i = 0; i < N; i += 1) begin
+        for (i = 0; i < N; i += 1) begin : priority_encoder
             if (lod_one_hot[i]) 
                 lod_val = LOD_W'(i);
         end
@@ -43,7 +43,7 @@ module square #(
         if (lod_val < K) begin
             in_selected = in_abs[K-1:0];
         end else begin
-            for (j = K; j < N; j += 1) begin
+            for (j = K; j < N; j += 1) begin : input_selector
                 if (lod_val == j)
                     in_selected = {in_abs >> (lod_val - K + 2), 1'b1};
             end
