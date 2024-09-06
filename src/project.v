@@ -209,6 +209,7 @@ module tt_um_dendraws_donut (
   assign i[20] = d20 < 35 && d20 > 31 && pix_y < 215;
 
   // ------------------------------ Squares ------------------------------
+  /*
   wire [11:0] i_squares;
 
   localparam N_FC = 8;
@@ -255,7 +256,7 @@ module tt_um_dendraws_donut (
 
   assign i_squares[4] = (pix_x - 230 - fc_l_2) < 10 && (pix_y - 275 + fc_l) < 10;
   assign i_squares[5] = (pix_x - 230 - fc) < 10 && (pix_y - 275 + fc) < 10;
-
+  */
   // ------------------------------ Display ------------------------------
 
   // Values for bounds will be valid in phase 1
@@ -265,10 +266,11 @@ module tt_um_dendraws_donut (
   wire in_bounds_hole = (d6 < 23 && pix_y < 233) || (d4 < 14 && pix_y >= 233);
   
   wire circ_fire = in_bounds_rect && in_bounds_circ && (i_phase_0 || i_phase_1);
-  wire square_fire = |i_squares;
+  // wire square_fire = |i_squares;
 
   wire i_phase_1 = |i[20:18] || i[16] || |i[13:11] || i[9] || |i[6:0];
-
+  
+  /*
   always @(*) begin
     if (~video_active) begin
       {R, G, B} = 6'd0;
@@ -282,6 +284,20 @@ module tt_um_dendraws_donut (
       else if (square_fire)
         // {R, G, B} = 6'b001010;
         {R, G, B} = 6'b011111;
+      else
+        {R, G, B} = 6'b000001;
+    end
+  end
+  */
+
+  always @(*) begin
+    if (~video_active) begin
+      {R, G, B} = 6'd0;
+    end else begin
+      if (circ_fire)
+        {R, G, B} = 6'b111111;
+      else if (in_bounds && ~in_bounds_hole)
+        {R, G, B} = 6'b001010;
       else
         {R, G, B} = 6'b000001;
     end
