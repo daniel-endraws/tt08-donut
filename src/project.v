@@ -209,7 +209,7 @@ module tt_um_dendraws_donut (
   assign i[20] = d20 < 35 && d20 > 31 && pix_y < 215;
 
   // ------------------------------ Squares ------------------------------
-  wire [15:0] i_squares;
+  wire [11:0] i_squares;
 
   localparam N_FC = 8;
 
@@ -238,8 +238,8 @@ module tt_um_dendraws_donut (
   assign i_squares[2] = (pix_x - 360 - fc_l_2) < 10 && (pix_y - 300 - fc_l) < 10;
   assign i_squares[3] = (pix_x - 360 - fc) < 10 && (pix_y - 300 - fc) < 10;
 
-  assign i_squares[4] = (pix_x - 200 + fc_l) < 10 && (pix_y - 275 - fc_l_2) < 10;
-  assign i_squares[5] = (pix_x - 200 + fc) < 10 && (pix_y - 275 - fc) < 10;
+  // assign i_squares[4] = (pix_x - 200 + fc_l) < 10 && (pix_y - 275 - fc_l_2) < 10;
+  // assign i_squares[5] = (pix_x - 200 + fc) < 10 && (pix_y - 275 - fc) < 10;
 
   assign i_squares[6] = (pix_x - 430 - fc) < 10 && (pix_y - 275 - fc_2) < 10;
   assign i_squares[7] = (pix_x - 430 - fc_l) < 10 && (pix_y - 275 - fc_l_2) < 10;
@@ -250,11 +250,11 @@ module tt_um_dendraws_donut (
   assign i_squares[10] = (pix_x - 430 - fc) < 10 && (pix_y - 200 + fc) < 10;
   assign i_squares[11] = (pix_x - 430 - fc_l_2) < 10 && (pix_y - 200 + fc_l) < 10;
 
-  assign i_squares[12] = (pix_x - 360 + fc_2) < 10 && (pix_y - 240 + fc) < 10;
-  assign i_squares[13] = (pix_x - 360 + fc_l) < 10 && (pix_y - 240 + fc_l) < 10;
+  // assign i_squares[12] = (pix_x - 360 + fc_2) < 10 && (pix_y - 240 + fc) < 10;
+  // assign i_squares[13] = (pix_x - 360 + fc_l) < 10 && (pix_y - 240 + fc_l) < 10;
 
-  assign i_squares[14] = (pix_x - 230 - fc_l_2) < 10 && (pix_y - 275 + fc_l) < 10;
-  assign i_squares[15] = (pix_x - 230 - fc) < 10 && (pix_y - 275 + fc) < 10;
+  assign i_squares[4] = (pix_x - 230 - fc_l_2) < 10 && (pix_y - 275 + fc_l) < 10;
+  assign i_squares[5] = (pix_x - 230 - fc) < 10 && (pix_y - 275 + fc) < 10;
 
   // ------------------------------ Display ------------------------------
 
