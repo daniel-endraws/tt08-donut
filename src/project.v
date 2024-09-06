@@ -176,9 +176,11 @@ module tt_um_dendraws_donut (
   wire [7:0] d21 = d19_x + d3_y;
   assign i[20] = d21 < 35 && d21 > 31 && pix_y < 215;
 
-  // Rect bounds using abs?
-  wire in_bounds = d1 < 52;
-  wire light = in_bounds && |i;
+  // ------------------------------ Display ------------------------------
+
+  wire in_bounds_rect = pix_x > 150 && pix_y > 120 && pix_x < 490 && pix_y < 360;
+  wire in_bounds_circ = d1 < 52;
+  wire light = in_bounds_rect && in_bounds_circ && |i;
   wire [1:0] value = {2{light}};
 
   assign R = video_active ? value : 2'b00;

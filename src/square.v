@@ -1,7 +1,6 @@
 `default_nettype none
 // Taken from https://ieeexplore.ieee.org/abstract/document/7372600 (DRUM)
 
-
 module square #(
     parameter N = 16,
     parameter K = 5,
@@ -25,6 +24,7 @@ module square #(
 
     // MSB Priority encoder
     integer i;
+    (* nolatches *)
     always @(*) begin
         lod_val = '0;
         for (i = 0; i < N; i += 1) begin
@@ -32,8 +32,10 @@ module square #(
                 lod_val = LOD_W'(i);
         end
     end
+    
 
     // Select Bits from input
+    integer j;
     (* nolatches *)
     always @(*) begin
         in_selected = '0;
@@ -41,8 +43,8 @@ module square #(
         if (lod_val < K) begin
             in_selected = in_abs[K-1:0];
         end else begin
-            for (i = K; i < N; i += 1) begin
-                if (lod_val == i)
+            for (j = K; j < N; j += 1) begin
+                if (lod_val == j)
                     in_selected = {in_abs >> (lod_val - K + 2), 1'b1};
             end
         end
