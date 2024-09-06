@@ -290,6 +290,7 @@ module tt_um_dendraws_donut (
   end
   */
 
+
   always @(*) begin
     if (~video_active) begin
       {R, G, B} = 6'd0;
